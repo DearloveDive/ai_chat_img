@@ -1,0 +1,202 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GitHub 이미지 링크 변환기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: single column — paste box on top, format switch, then one result row per pasted link. */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --ink:#18212e; --muted:#5b6777; --line:#d3dae4;
+  --accent:#2b59c3; --accent-ink:#ffffff; --accent-soft:#e3ebfb; --danger:#b3261e; --ok:#1f7a4d;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#93a0b2; --line:#2b3442;
+  --accent:#7aa2ff; --accent-ink:#0d1420; --accent-soft:#1d2a44; --danger:#ff8a80; --ok:#6fd3a0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#93a0b2; --line:#2b3442;
+  --accent:#7aa2ff; --accent-ink:#0d1420; --accent-soft:#1d2a44; --danger:#ff8a80; --ok:#6fd3a0; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+.wrap{max-width:820px;margin:0 auto;padding:40px 16px 64px;display:grid;gap:22px}
+h1{font-size:28px;line-height:1.25;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+label.lbl{font-weight:500;font-size:14px}
+textarea{font:inherit;font-family:var(--mono);font-size:13px;line-height:1.7;width:100%;min-height:120px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:flex;flex-wrap:wrap;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-size:13px;font-family:var(--mono);border:0;background:none;color:var(--muted);padding:5px 11px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.btn{font:inherit;font-weight:500;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 14px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;min-width:0}
+.res .file{font-weight:500;font-size:14px;overflow-wrap:anywhere;margin:0}
+.res .file span{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--muted);margin-left:6px}
+.out{display:flex;gap:8px;min-width:0}
+.out input{flex:1;min-width:0;font-family:var(--mono);font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.res.bad{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}
+.res.bad p{margin:0;font-size:13px;color:var(--danger);overflow-wrap:anywhere}
+.res.bad code{font-family:var(--mono);color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin:0}
+.tip{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.guide{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:6px}
+.guide h2{font-size:15px;margin:0}
+.guide ul{margin:0;padding-left:20px;font-size:13px;color:var(--muted);display:grid;gap:3px}
+.guide code{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.empty{color:var(--muted);font-size:14px;margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>GitHub 이미지 링크 변환기</h1>
+    <p class="lede">GitHub에서 복사한 파일 주소를 붙여 넣으면 블로그, 게시판, 채팅에 바로 쓸 수 있는 이미지 링크로 바꿔 줍니다.</p>
+  </header>
+
+  <div style="display:grid;gap:8px">
+    <label class="lbl" for="src">GitHub 주소 (여러 개면 한 줄에 하나씩)</label>
+    <textarea id="src" spellcheck="false" placeholder="https://github.com/아이디/저장소/blob/main/사진.png">https://github.com/DearloveDive/ai_chat_img/blob/main/remnant-edge-black.png</textarea>
+    <span class="tip">붙여 넣으면 바로 변환됩니다</span>
+  </div>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="링크 형식" id="seg">
+      <button data-f="cdn">jsDelivr</button>
+      <button data-f="raw">Raw</button>
+      <button data-f="md">Markdown</button>
+      <button data-f="html">HTML</button>
+      <button data-f="bb">BBCode</button>
+    </div>
+    <button class="btn" id="copyAll" hidden>전체 복사</button>
+  </div>
+
+  <ul class="list" id="list"></ul>
+  <p class="empty" id="empty" hidden>위 칸에 GitHub 주소를 붙여 넣으세요.</p>
+
+  <section class="guide">
+    <h2>이런 주소를 넣을 수 있어요</h2>
+    <ul>
+      <li>파일 보기 페이지: <code>github.com/아이디/저장소/blob/main/사진.png</code></li>
+      <li>Raw 주소: <code>raw.githubusercontent.com/아이디/저장소/main/사진.png</code></li>
+      <li>이미 바꾼 jsDelivr 주소도 다른 형식으로 다시 바꿀 수 있어요.</li>
+      <li>저장소가 <b>Public</b>이어야 다른 사람에게도 이미지가 보여요.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const src = $("#src"), list = $("#list"), empty = $("#empty"), copyAllBtn = $("#copyAll");
+  const IMG = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)$/i;
+  let fmt = "cdn";
+  try { fmt = localStorage.getItem("ghconv_fmt") || "cdn"; } catch(e){}
+
+  function parse(line){
+    let s = line.trim().replace(/^<|>$/g, "");
+    if (!s) return null;
+    if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+    let u;
+    try { u = new URL(s); } catch(e){ return {error: "주소 형식이 아닙니다."}; }
+    const parts = u.pathname.split("/").filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch(e){ return p; } });
+    const host = u.hostname.toLowerCase();
+    let owner, repo, branch, path;
+
+    if (host === "github.com" || host === "www.github.com") {
+      if (parts.length < 2) return {error: "저장소 주소가 아닙니다."};
+      [owner, repo] = parts;
+      const kind = parts[2];
+      if (kind === "tree") return {error: "폴더 주소입니다. 폴더 안의 이미지 파일을 눌러서 나온 주소를 넣어 주세요."};
+      if (kind !== "blob" && kind !== "raw") return {error: "파일 주소가 아닙니다. 저장소에서 이미지 파일을 눌러서 나온 주소를 넣어 주세요."};
+      branch = parts[3]; path = parts.slice(4);
+    } else if (host === "raw.githubusercontent.com") {
+      [owner, repo] = parts;
+      let rest = parts.slice(2);
+      if (rest[0] === "refs" && rest[1] === "heads") rest = rest.slice(2);
+      branch = rest[0]; path = rest.slice(1);
+    } else if (host === "cdn.jsdelivr.net" && parts[0] === "gh") {
+      owner = parts[1];
+      const at = (parts[2] || "").split("@");
+      repo = at[0]; branch = at[1] || "main"; path = parts.slice(3);
+    } else if (host === "user-images.githubusercontent.com" || host.endsWith("githubusercontent.com")) {
+      return {direct: u.href, name: parts[parts.length-1] || "image"};
+    } else {
+      return {error: "GitHub 주소가 아닙니다."};
+    }
+    if (!owner || !repo || !branch || !path || !path.length) return {error: "주소가 중간에 잘린 것 같습니다. 끝까지 복사했는지 확인하세요."};
+    const filePath = path.join("/");
+    return {owner, repo, branch, path: filePath, name: path[path.length-1], notImage: !IMG.test(filePath)};
+  }
+
+  const enc = p => p.split("/").map(encodeURIComponent).join("/");
+  function build(r, f){
+    let cdn, raw;
+    if (r.direct) { cdn = raw = r.direct; }
+    else {
+      cdn = `https://cdn.jsdelivr.net/gh/${r.owner}/${r.repo}@${r.branch}/${enc(r.path)}`;
+      raw = `https://raw.githubusercontent.com/${r.owner}/${r.repo}/${r.branch}/${enc(r.path)}`;
+    }
+    const alt = r.name.replace(/\.[^.]+$/, "");
+    const altEsc = alt.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    if (f === "raw") return raw;
+    if (f === "md") return `![${alt.replace(/[\[\]]/g, "")}](${cdn})`;
+    if (f === "html") return `<img src="${cdn}" alt="${altEsc}">`;
+    if (f === "bb") return `[img]${cdn}[/img]`;
+    return cdn;
+  }
+
+  async function copy(text, btn, input){
+    try { await navigator.clipboard.writeText(text); btn.textContent = "복사됨"; }
+    catch(e){ if (input) { input.focus(); input.select(); } btn.textContent = "Ctrl+C로 복사"; }
+    const orig = btn.dataset.label;
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }
+
+  let goodOutputs = [];
+  function render(){
+    document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === fmt)));
+    const lines = src.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    goodOutputs = [];
+    empty.hidden = lines.length > 0;
+    list.replaceChildren(...lines.map(line => {
+      const r = parse(line);
+      const li = document.createElement("li");
+      if (!r || r.error) {
+        li.className = "res bad";
+        const p = document.createElement("p"); p.textContent = (r && r.error) || "읽을 수 없는 주소입니다.";
+        const c = document.createElement("code"); c.textContent = line;
+        li.append(p, c);
+        return li;
+      }
+      const out = build(r, fmt);
+      goodOutputs.push(out);
+      li.className = "res";
+      li.innerHTML = `<p class="file"></p><div class="out"><input readonly aria-label="변환된 링크"><button class="btn primary small" data-label="복사">복사</button></div>`;
+      const fileEl = li.querySelector(".file");
+      fileEl.textContent = r.name;
+      if (!r.direct) { const s = document.createElement("span"); s.textContent = `${r.owner}/${r.repo} · ${r.branch}`; fileEl.append(s); }
+      if (r.notImage) { const s = document.createElement("span"); s.textContent = "· 이미지 파일이 아닐 수 있어요"; fileEl.append(s); }
+      const input = li.querySelector("input"); input.value = out;
+      input.addEventListener("focus", () => input.select());
+      const btn = li.querySelector("button");
+      btn.addEventListener("click", () => copy(out, btn, input));
+      return li;
+    }));
+    copyAllBtn.hidden = goodOutputs.length < 2;
+  }
+
+  document.querySelectorAll("#seg button").forEach(b => b.addEventListener("click", () => {
+    fmt = b.dataset.f;
+    try { localStorage.setItem("ghconv_fmt", fmt); } catch(e){}
+    render();
+  }));
+  copyAllBtn.dataset.label = "전체 복사";
+  copyAllBtn.addEventListener("click", () => copy(goodOutputs.join("\n"), copyAllBtn, null));
+  src.addEventListener("input", render);
+  render();
+})();
+</script>
+
+</body></html>
